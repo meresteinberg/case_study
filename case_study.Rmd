@@ -1,0 +1,16 @@
+---
+title: "Case Study"
+output: github_document
+date: "2024-10-09"
+---
+Load key packages
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+```
+
+```{r}
+data(nyc_airbnb)
+```
+
+## Brainstorm questions
