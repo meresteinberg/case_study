@@ -1,12 +1,13 @@
 ---
 title: "Case Study"
-output: github_document
+output: html_document
 date: "2024-10-09"
 ---
 Load key packages
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(p8105.datasets)
+library(leaflet)
 ```
 
 ```{r}
@@ -14,3 +15,162 @@ data(nyc_airbnb)
 ```
 
 ## Brainstorm questions
+
+*Where are max and min airbnb prices
+  *What are avg prices?
+  *What factors affect prices?
+*Where are prices going up and down over time?
+*What's the relationship bw number of reviews and avg review?
+*Does room type affect availability?
+*What's the location of the unit?
+  *What areas are popular?
+  *Popularity = number of units? avg price?
+*Are there repeat hosts?
+  *If so, what does that mean?
+  
+Prices...
+```{r}
+nyc_airbnb |> 
+  summarize(min_price=min(price, na.rm=TRUE), 
+  max_price=max(price, na.rm = TRUE))
+
+nyc_airbnb |> 
+  summarize(mean(price, na.rm = TRUE))
+```
+
+distrib of prices in 5 boroughs
+```{r}
+nyc_airbnb %>%
+  ggplot(aes(x = price, fill = neighbourhood_group)) +
+  geom_histogram() +
+  facet_grid(. ~ neighbourhood_group) +
+  scale_x_continuous(limits = c(0, 250))
+```
+
+does room type affect availability?
+```{r}
+ggplot(data = nyc_airbnb, aes(x = room_type, y = availability_365)) +
+  geom_violin() 
+```
+
+mean price for entire home vs private room vs shared room
+```{r}
+nyc_airbnb |>
+  group_by(room_type) |>
+  summarize(mean_price = mean(price))
+```
+
+Comparing number of reviews vs. average review score
+```{r}
+ggplot(data=nyc_airbnb, aes(x=number_of_reviews, y=review_scores_location, na.rm=TRUE)) + geom_point()
+```
+
+Repeat hosts
+```{r}
+nyc_airbnb %>%
+  filter(calculated_host_listings_count > 1) %>%
+  distinct(host_id, host_name, calculated_host_listings_count) |> 
+  arrange(desc(calculated_host_listings_count))
+```
+
+```{r}
+nyc_airbnb %>%
+  filter(calculated_host_listings_count > 34)
+```
+
+```{r}
+nyc_airbnb %>%
+  group_by(neighbourhood_group) %>%
+  summarise(total_reviews = sum(number_of_reviews, na.rm = TRUE)) %>%
+  arrange(desc(total_reviews))
+
+```
+
+```{r}
+nyc_airbnb |> 
+  group_by(neighbourhood_group, room_type) |> 
+  summarize(median_price=median(price)) |> 
+  pivot_wider(
+    names_from= room_type,
+    values_from=median_price
+  )
+```
+
+```{r}
+nyc_airbnb |> 
+  ggplot(aes(x=review_scores_location, y=price)) +
+  geom_point()
+```
+
+looking at locations in Manhattan
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000) |> 
+  ggplot(aes(x=lat, y=long, color=price)) +
+  geom_point(alpha=.1)
+```
+
+descending mean price by neighborhood
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000,
+         room_type == "Entire home/apt") |> 
+  group_by(neighbourhood) |> 
+  summarize(mean_price=mean(price)) |> 
+  arrange(desc(mean_price))
+```
+ 
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000,
+         room_type == "Entire home/apt") |> 
+  mutate(neighbourhood=fct_reorder(neighbourhood,price)) |> 
+  ggplot(aes(x=neighbourhood, y=price)) +
+  geom_violin() +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+```
+
+Go back to that map
+
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000) |> 
+  ggplot(aes(x=lat, y=long, color=price)) +
+  geom_point(alpha=.1)
+```
+
+Leaflet package loaded--interactive map created below (look at link online)
+--slice giving us first 10 rows bc its a huge dataset
+--if we change from github doc to html doc we can knit and the leaflet map will show up
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000) |> 
+  slice(1:100) |> 
+  leaflet() |> 
+  addTiles() |> 
+  addCircleMarkers(~lat, ~long, radius=2)
+```
+
+```{r}
+pal <- colorNumeric(c("red", "green", "blue"),
+                  domain = nyc_airbnb$ratings)
+
+nyc_airbnb |> 
+  filter(neighbourhood_group=="Manhattan",
+         price<1000) |> 
+  leaflet() |> 
+  addProviderTiles(providers$CartoDB.Positron) |> 
+  addCircleMarkers(~lat, ~long, color = ~pal(price), radius=2)
+```
+
+
+
+
+
+
+  
